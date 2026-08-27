@@ -82,6 +82,10 @@
         .payment-btn {
             border-radius: 10px;
         }
+
+        .cursor-pointer {
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -222,7 +226,8 @@
                                 <span class="fw-bold">Total</span>
                                 <span class="total-price" id="total">Rp.0 </span>
                             </div>
-                            <button onclick="processPayment()" class="btn btn-success w-100 py-3">Payment</button>
+                            <button id="btnOpenPaymentModal" onclick="openModalPayment()"
+                                class="btn btn-success w-100 py-3">Payment</button>
                         </div>
                     </div>
                 </div>
@@ -231,7 +236,77 @@
         </main>
     </div>
 
+    <!-- Modal -->
+    <div class="modal fade" id="paymentMethod" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-labelledby="paymentMethodLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centerd">
+            <div class="modal-content rounded-4 shadow-lg border-0">
+                <div class="modal-header bg-success text-white">
+                    <h1 class="modal-title fs-5" id="paymentMethodLabel">Modal title</h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Customer Name</label>
+                        <input type="text" id="customer_name" class="form-control">
+                    </div>
+                    <h5 class="mb-3 fw-bold">Pilih Metode Pembayaran</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="w-100 cursor-pointer">
+                                <input type="radio" name="payment_method" value="cash"
+                                    class="d-none payment-option" checked>
+                                <div class="card p-3 shadow-sm border payment-card text-center h-100">
+                                    <h4 class="text-success fw-bold"><i class="bi bi-cash-stack"></i> Cash</h4>
+                                    <p class="text-muted small">Bayar langsung di Kasir Secara Tunai.</p>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="w-100 cursor-pointer">
+                                <input type="radio" name="payment_method" value="midtrans"
+                                    class="d-none payment-option">
+                                <div class="card p-3 shadow-sm border payment-card text-center h-100">
+                                    <h4 class="text-success fw-bold"><i class="bi bi-qr-code-scan"></i> Midtrans</h4>
+                                    <p class="text-muted small">Pembayaran online via QRIS/ E-Wallet.</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" onclick="processPayment()" class="btn btn-primary">Pay Now!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous">
+    </script>
     <script>
+        document.querySelectorAll('.payment-option').forEach(input => {
+            input.addEventListener('change', function() {
+                document.querySelectorAll('.payment-card').forEach(card => card.classList.remove(
+                    'border-success', 'border-primary', 'bg-light'));
+                if (this.checked) {
+                    const card = this.nextElementSibling;
+                    card.classList.add(this.value === 'cash' ? 'border-success' : 'border-primary',
+                        'bg-light');
+                }
+            });
+        });
+
+        function openModalPayment() {
+            if (cart.length === 0) {
+                alert('Cart is Empty')
+                return;
+            }
+            const modal = new bootstrap.Modal(document.getElementById('paymentMethod'));
+            modal.show();
+        }
+
         function filterCategory(categoryId, button) {
             // selectorAll = array
             const products = document.querySelectorAll('.product-item');
@@ -428,6 +503,13 @@
                 return;
             }
 
+            const selectedPayment = document.querySelector('input[name="payment_method"]:checked');
+            const paymentMethod = selectedPayment ? selectedPayment.value : 'cash';
+            const customerName = document.getElementById('customer_name').value;
+
+            // console.log("Metode pembayaran terpilih:", paymentMethod);
+            // console.log("Nama Customer:", customerName);
+
             try {
                 const response = await fetch("{{ route('order.store') }}", {
                     method: "POST",
@@ -444,14 +526,50 @@
                                 qty: item.qty
                             }
                         }),
-                        payment_method: "cash",
+                        payment_method: paymentMethod,
+                        customer_name: customerName
                     })
                 })
 
                 const result = await response.json();
-                cart = [];
-                displayCart();
-                location.reload();
+                if (!response.ok) {
+                    alert(result.message || 'Terjadi kesalahan sistem');
+                    return;
+                }
+
+                if (result.payment_method === "midtrans") {
+                    //MIDTRANS
+                    window.snap.pay(result.snap_token, {
+                        onSuccess: function(result) {
+                            /* You may add your own implementation here */
+                            alert("payment success!");
+                            cart = [];
+                            displayCart();
+                            location.reload();
+                            // console.log(result);
+                        },
+                        onPending: function(result) {
+                            /* You may add your own implementation here */
+                            alert("wating your payment!");
+                            // console.log(result);
+                            location.reload();
+                        },
+                        onError: function(result) {
+                            /* You may add your own implementation here */
+                            alert("payment failed!");
+                            // console.log(result);
+                        },
+                        onClose: function() {
+                            /* You may add your own implementation here */
+                            alert('you closed the popup without finishing the payment');
+                        }
+                    });
+                } else {
+                    alert('Transaksi Cash Berhasil!');
+                    cart = [];
+                    displayCart();
+                    location.reload();
+                }
             } catch (error) {
                 console.log(error)
                 alert('GAGAL MEMPROSES TRANSAKSI' + error.message);

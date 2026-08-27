@@ -11,7 +11,8 @@ class Product extends Model
         'category_id',
         'photo',
         'price',
-        'description'
+        'description',
+        'qty'
     ];
 
     // many to one
