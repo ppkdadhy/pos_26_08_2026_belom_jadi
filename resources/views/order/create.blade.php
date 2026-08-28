@@ -250,12 +250,28 @@
                         <label class="form-label fw-semibold">Customer Name</label>
                         <input type="text" id="customer_name" class="form-control">
                     </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-1">
+                            <strong class="bg-success p-2 text-white rounded" id="total-paid">Harga : Rp.0</strong>
+                        </div>
+                    </div>
+                    <div class="row only-cash d-none align-items-center my-3">
+                        <div class="col-md-6">
+                            <label for="cash_paid" class="form-label fw-bold">Pembayaran Cash :</label>
+                            <input type="number" id="cash_paid" step="any" min="0"
+                                class="form-control mb-2" oninput="calculateChange()">
+                        </div>
+                        <div class="col-md-6">
+                            <strong class="bg-primary p-2 text-white rounded" id="change-paid">Kembalian :
+                                Rp.0</strong>
+                        </div>
+                    </div>
                     <h5 class="mb-3 fw-bold">Pilih Metode Pembayaran</h5>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="w-100 cursor-pointer">
                                 <input type="radio" name="payment_method" value="cash"
-                                    class="d-none payment-option" checked>
+                                    class="d-none payment-option">
                                 <div class="card p-3 shadow-sm border payment-card text-center h-100">
                                     <h4 class="text-success fw-bold"><i class="bi bi-cash-stack"></i> Cash</h4>
                                     <p class="text-muted small">Bayar langsung di Kasir Secara Tunai.</p>
@@ -295,8 +311,39 @@
                     card.classList.add(this.value === 'cash' ? 'border-success' : 'border-primary',
                         'bg-light');
                 }
+                const onlyCashBox = document.querySelector('.only-cash');
+                if (this.value === 'cash') {
+                    onlyCashBox.classList.remove('d-none');
+                    document.getElementById('cash_paid').focus();
+                } else {
+                    onlyCashBox.classList.add('d-none');
+                    document.getElementById('cash_paid').value = 0;
+                }
             });
         });
+
+        function calculateChange() {
+            let subtotal = 0;
+            cart.forEach(function(item) {
+                subtotal += Number(item.price) * Number(item.qty);
+            });
+
+            const tax = subtotal * 0.1;
+            const totalAmount = subtotal + tax;
+            const cashPaidInput = parseFloat(document.getElementById('cash_paid').value) || 0;
+            const changeMoney = cashPaidInput - totalAmount;
+            const changeElement = document.getElementById('change-paid');
+            if (changeMoney < 0) {
+                changeElement.innerText = `Kurang Rp. ${formatRupiah(Math.abs(changeMoney))}`;
+                // changeElement.classList.add('text-danger');
+                changeElement.classList.add('bg-danger');
+                changeElement.classList.remove('bg-primary');
+            } else {
+                changeElement.innerText = `Kembali Rp. ${formatRupiah(changeMoney)}`;
+                changeElement.classList.add('bg-primary');
+                changeElement.classList.remove('bg-danger');
+            }
+        }
 
         function openModalPayment() {
             if (cart.length === 0) {
@@ -473,7 +520,12 @@
             document.getElementById('subtotal').innerText = `Rp. ${formatRupiah(subtotal)}`
             document.getElementById('tax').innerText = `Rp. ${formatRupiah(tax)}`
             document.getElementById('total').innerText = `Rp. ${formatRupiah(total)}`
+            document.getElementById('total-paid').innerText = `Rp. ${formatRupiah(total)}`
             document.getElementById('cartCount').innerText = itemCount;
+
+            return {
+                total
+            };
         }
 
         function formatRupiah(number) {
@@ -507,6 +559,28 @@
             const paymentMethod = selectedPayment ? selectedPayment.value : 'cash';
             const customerName = document.getElementById('customer_name').value;
 
+            if (!selectedPayment) {
+                alert("PILIH DAHULU METODE PEMBAYARAN!");
+                return;
+            }
+            const {
+                total
+            } = calculateCart();
+            const cashPayInput = document.getElementById('cash_paid');
+            let change = 0;
+
+            if (paymentMethod === 'cash') {
+                const cashPaidValue = parseFloat(cashPayInput?.value) || 0;
+
+                if (!cashPaidValue) {
+                    alert("Input pembayaran terlebih dahulu!");
+                    cashPayInput.focus();
+                    return;
+                }
+                change = cashPaidValue - total;
+            }
+            // console.log("Kembali" + change);
+
             // console.log("Metode pembayaran terpilih:", paymentMethod);
             // console.log("Nama Customer:", customerName);
 
@@ -527,7 +601,8 @@
                             }
                         }),
                         payment_method: paymentMethod,
-                        customer_name: customerName
+                        customer_name: customerName,
+                        order_change: change
                     })
                 })
 

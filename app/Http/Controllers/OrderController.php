@@ -43,6 +43,7 @@ class OrderController extends Controller
             'items.*.id' => 'required|exists:products,id',
             'items.*.qty' => 'required|integer|min:1',
             'payment_method' => 'nullable|string',
+            'order_change' => 'required'
             // 'customer_name' => 'nullable|string'
         ]);
         try {
@@ -78,8 +79,8 @@ class OrderController extends Controller
                 $order = \App\Models\Order::create([
                     'order_code' => $orderCode,
                     'order_amount' => $total,
-                    'order_change' => 0,
-                    'order_status' => $paymentMethod === 'cash' ? 'success' : 'pending'
+                    'order_change' => $request->order_change,
+                    'status' => $paymentMethod === 'cash' ? 1 : 0
                 ]);
 
                 // OrderDetail
