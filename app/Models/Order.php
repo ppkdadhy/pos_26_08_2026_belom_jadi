@@ -12,4 +12,9 @@ class Order extends Model
         'order_change',
         'status'
     ];
+    // Relasi 1 to Many
+    public function orderDetails()
+    {
+        return $this->hasMany(OrderDetail::class, 'order_id', 'id');
+    }
 }

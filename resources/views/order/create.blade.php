@@ -343,6 +343,10 @@
                 changeElement.classList.add('bg-primary');
                 changeElement.classList.remove('bg-danger');
             }
+
+            return {
+                changeMoney
+            };
         }
 
         function openModalPayment() {
@@ -523,9 +527,6 @@
             document.getElementById('total-paid').innerText = `Rp. ${formatRupiah(total)}`
             document.getElementById('cartCount').innerText = itemCount;
 
-            return {
-                total
-            };
         }
 
         function formatRupiah(number) {
@@ -564,10 +565,9 @@
                 return;
             }
             const {
-                total
-            } = calculateCart();
+                changeMoney
+            } = calculateChange();
             const cashPayInput = document.getElementById('cash_paid');
-            let change = 0;
 
             if (paymentMethod === 'cash') {
                 const cashPaidValue = parseFloat(cashPayInput?.value) || 0;
@@ -577,7 +577,7 @@
                     cashPayInput.focus();
                     return;
                 }
-                change = cashPaidValue - total;
+
             }
             // console.log("Kembali" + change);
 
@@ -602,7 +602,7 @@
                         }),
                         payment_method: paymentMethod,
                         customer_name: customerName,
-                        order_change: change
+                        order_change: changeMoney
                     })
                 })
 
@@ -618,9 +618,11 @@
                         onSuccess: function(result) {
                             /* You may add your own implementation here */
                             alert("payment success!");
+                            console.log(result);
+                            window.open(`${result.order_id}/print`, '_blank');
                             cart = [];
                             displayCart();
-                            location.reload();
+                            // location.reload();
                             // console.log(result);
                         },
                         onPending: function(result) {
@@ -641,9 +643,11 @@
                     });
                 } else {
                     alert('Transaksi Cash Berhasil!');
+                    console.log(result);
+                    window.open(`${result.order_id}/print`, '_blank');
                     cart = [];
                     displayCart();
-                    location.reload();
+                    // location.reload();
                 }
             } catch (error) {
                 console.log(error)

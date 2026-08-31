@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\Product;
 use Exception;
@@ -103,15 +104,25 @@ class OrderController extends Controller
                     \Midtrans\Config::$isSanitized  = true;
                     \Midtrans\Config::$is3ds        = true;
 
+                    foreach ($itemsData as $data) {
+                        OrderDetail::create([
+                            'order_id'      => $order->id,
+                            'product_id'    => $data['product']->id,
+                            'order_qty'     => $data['qty'],
+                            'order_price'   => $data['price'],
+                            'order_subtotal' => $data['subtotal']
+                        ]);
+                        $data['product']->decrement('qty', $data['qty']);
+                    }
                     $params = [
                         "transaction_details" => [
-                            "order_id" => $order->order_code,
+                            "order_id" => $order->id,
                             "gross_amount" => (int) round($total)
                         ],
                         "customer_details" => [
                             'first_name' => $request->customer_name ?? 'No-Name',
                         ],
-                        // 'enabled_payments' => ['gopay', 'qris'],
+                        'enabled_payments' => ['gopay', 'qris'],
                     ];
 
                     $snapToken = \Midtrans\Snap::getSnapToken($params);
@@ -138,6 +149,12 @@ class OrderController extends Controller
         // return response()->json([
         //     'message' => 'success'
         // ], 200);
+    }
+
+    public function printRecipt(string $id)
+    {
+        $order = Order::with('orderDetails.product')->find($id);
+        return view('order.print', compact('order'));
     }
 
     /**

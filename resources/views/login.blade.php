@@ -26,7 +26,7 @@
                                     <label for="" class="form-label fw-semibold">Email</label>
                                     <input type="email" name="email"
                                         class="form-control @error('email') is-invalid @enderror"
-                                        placeholder="Enter your email" required value="{{ old('email') }}">
+                                        placeholder="Enter your email" required value="">
 
                                     @error('email')
                                         <div class="invalid-feedback">{{ $message }}</div>
@@ -41,9 +41,24 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                                <button type="submit" class="btn btn-primary w-100 fw-semibold">
-                                    Login
-                                </button>
+                                @guest
+                                    <button type="submit" class="btn btn-primary w-100 fw-semibold">
+                                        Login
+                                    </button>
+                                @else
+                                    @php
+                                        $dashboardUrl = match (Auth::user()->role_id) {
+                                            1 => url('admin/dashboard'),
+                                            2 => url('cashier/dashboard'),
+                                            default => url('dashboard'),
+                                        };
+                                    @endphp
+
+                                    <a href="{{ $dashboardUrl }}" class="btn btn-success w-100 fw-semibold">
+                                        Dashboard
+                                    </a>
+                                @endguest
+
                             </form>
                         </div>
                     </div>
